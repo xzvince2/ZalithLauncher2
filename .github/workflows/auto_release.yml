@@ -1,0 +1,37 @@
+name: Auto Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  Build:
+    uses: ./.github/workflows/build.yml
+    with:
+      variant: Release
+    secrets: inherit
+
+  Publish:
+    needs: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*Release*'
+          merge-multiple: true
+          path: dist
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes \
+            dist/*
